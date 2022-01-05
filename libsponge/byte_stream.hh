@@ -2,7 +2,7 @@
 #define SPONGE_LIBSPONGE_BYTE_STREAM_HH
 
 #include <string>
-
+#include <memory>
 //! \brief An in-order byte stream.
 
 //! Bytes are written on the "input" side and read from the "output"
@@ -10,22 +10,25 @@
 //! and then no more bytes can be written.
 class ByteStream {
   private:
+  size_t front,tail;
+  size_t total_read,total_write;
+  const size_t capacity;
+  std::unique_ptr<char> buffer;
+  size_t first_unread,first_unacceptable; //important parameter.
     // Your code here -- add private members as necessary.
-
+  
     // Hint: This doesn't need to be a sophisticated data structure at
     // all, but if any of your tests are taking longer than a second,
     // that's a sign that you probably want to keep exploring
     // different approaches.
 
     bool _error{};  //!< Flag indicating that the stream suffered an error.
-
+    bool _eofin=false;    //Flag indicating that the input stream is end.
   public:
     //! Construct a stream with room for `capacity` bytes.
-    ByteStream(const size_t capacity);
-
+    ByteStream(const size_t cap);
     //! \name "Input" interface for the writer
     //!@{
-
     //! Write a string of bytes into the stream. Write as many
     //! as will fit, and return how many were written.
     //! \returns the number of bytes accepted into the stream
@@ -80,6 +83,8 @@ class ByteStream {
     //! Total number of bytes popped
     size_t bytes_read() const;
     //!@}
+
+    size_t getFirstUnacc() const;
 };
 
 #endif  // SPONGE_LIBSPONGE_BYTE_STREAM_HH

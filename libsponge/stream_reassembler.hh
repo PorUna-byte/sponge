@@ -5,22 +5,26 @@
 
 #include <cstdint>
 #include <string>
-
+#include <list>
 //! \brief A class that assembles a series of excerpts from a byte stream (possibly out of order,
 //! possibly overlapping) into an in-order byte stream.
 class StreamReassembler {
   private:
     // Your code here -- add private members as necessary.
-
+    
     ByteStream _output;  //!< The reassembled in-order byte stream
     size_t _capacity;    //!< The maximum number of bytes
-
+    std::unique_ptr<char> buffer; //To store all substrings that do not exceed the capacity.
+    size_t first_unassembled; //important parameter.
+    bool _eof;
+    std::list<std::pair<size_t,size_t>> stored;  //Stored but unassembled substring's start index & end index.
   public:
     //! \brief Construct a `StreamReassembler` that will store up to `capacity` bytes.
     //! \note This capacity limits both the bytes that have been reassembled,
     //! and those that have not yet been reassembled.
     StreamReassembler(const size_t capacity);
-
+ 
+    friend class ByteStream;
     //! \brief Receive a substring and write any newly contiguous bytes into the stream.
     //!
     //! The StreamReassembler will stay within the memory limits of the `capacity`.
@@ -46,6 +50,10 @@ class StreamReassembler {
     //! \brief Is the internal state empty (other than the output stream)?
     //! \returns `true` if no substrings are waiting to be assembled
     bool empty() const;
+
+    size_t getFirstUnassembled() const;
+
+    size_t getFirstUnacc() const;
 };
 
 #endif  // SPONGE_LIBSPONGE_STREAM_REASSEMBLER_HH

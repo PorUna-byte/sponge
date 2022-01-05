@@ -32,8 +32,8 @@ int main() {
             test.execute(ExpectAckno{std::optional<WrappingInt32>{}});
             test.execute(ExpectUnassembledBytes{0});
             test.execute(ExpectTotalAssembledBytes{0});
-            test.execute(SegmentArrives{}.with_syn().with_seqno(89347598).with_result(SegmentArrives::Result::OK));
-            test.execute(ExpectAckno{WrappingInt32{89347599}});
+            test.execute(SegmentArrives{}.with_syn().with_seqno(89347598).with_result(SegmentArrives::Result::OK));//98
+            test.execute(ExpectAckno{WrappingInt32{89347599}}); 
             test.execute(ExpectUnassembledBytes{0});
             test.execute(ExpectTotalAssembledBytes{0});
         }
