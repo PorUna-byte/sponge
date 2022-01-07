@@ -62,7 +62,7 @@ int main() {
             test.execute(ExpectBytes{"abcdefgh"});
         }
 
-        /* remove requirement for corrective ACK on out-of-window segment
+       /* // remove requirement for corrective ACK on out-of-window segment
             {
                 TCPReceiverTestHarness test{4000};
                 test.execute(SegmentArrives{}.with_syn().with_seqno(0).with_result(SegmentArrives::Result::OK));
