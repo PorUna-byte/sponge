@@ -8,13 +8,14 @@
 
 #include <functional>
 #include <queue>
-
+#include <list>
 //! \brief The "sender" part of a TCP implementation.
 
 //! Accepts a ByteStream, divides it up into segments and sends the
 //! segments, keeps track of which segments are still in-flight,
 //! maintains the Retransmission Timer, and retransmits in-flight
 //! segments if the retransmission timer expires.
+class myTimer;
 class TCPSender {
   private:
     //! our initial sequence number, the number for our SYN.
@@ -24,15 +25,36 @@ class TCPSender {
     std::queue<TCPSegment> _segments_out{};
 
     //! retransmission timer for the connection
-    unsigned int _initial_retransmission_timeout;
+    size_t _initial_retransmission_timeout;
+    
+    size_t time_left;
 
+    size_t RTO;
+
+    bool clock_running{false};
     //! outgoing stream of bytes that have not yet been sent
     ByteStream _stream;
+    
+    //! How many consecutive retransmissions the TCPsender has already sent?
+    unsigned int _consecutive_retransmissions;
 
     //! the (absolute) sequence number for the next byte to be sent
     uint64_t _next_seqno{0};
+    //! keep track of receiver's window size.
+    uint64_t _winleft{0};
+    
+    uint64_t _winright{0};
 
+    uint64_t _bytes_in_flight{0};
+
+    std::list<TCPSegment> outstanding_segments{};
+
+    bool first_ack_rcv{false}; 
+    bool fin_sent{false};
+    bool no_backoff{false};
+    friend class myTimer;//Authorize myTimer
   public:
+
     //! Initialize a TCPSender
     TCPSender(const size_t capacity = TCPConfig::DEFAULT_CAPACITY,
               const uint16_t retx_timeout = TCPConfig::TIMEOUT_DFLT,
@@ -88,5 +110,4 @@ class TCPSender {
     WrappingInt32 next_seqno() const { return wrap(_next_seqno, _isn); }
     //!@}
 };
-
 #endif  // SPONGE_LIBSPONGE_TCP_SENDER_HH
