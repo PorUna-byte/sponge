@@ -14,7 +14,7 @@ void TCPReceiver::segment_received(const TCPSegment &seg) {
     uint64_t checkpoint=_reassembler.getFirstUnassembled()>0?_reassembler.getFirstUnassembled()-1:
     _reassembler.getFirstUnassembled();
     uint64_t stream_index;
-    if(seg.header().syn)
+    if(seg.header().syn&&!ISN_rcv)
     {
        ISN_rcv=true;
        ISN_NO=seg.header().seqno; //record the initial seqno for later usage.
@@ -25,7 +25,7 @@ void TCPReceiver::segment_received(const TCPSegment &seg) {
       stream_index=unwrap(seg.header().seqno,ISN_NO,checkpoint)-1;//absolute seqno-1 is stream index.
     else
       return ;  
-    if(seg.header().fin)
+    if(seg.header().fin&&!FIN_rcv)
     {  
        _reassembler.push_substring(seg.payload().copy(),
        stream_index,true);
@@ -36,8 +36,8 @@ void TCPReceiver::segment_received(const TCPSegment &seg) {
        _reassembler.push_substring(seg.payload().copy(),
        stream_index,false);
     }
-    if(ISN_rcv&&FIN_rcv&&unassembled_bytes()==0)
-       offset++;
+    if(ISN_rcv&&FIN_rcv&&unassembled_bytes()==0&&offset<2)
+      offset++;
 }
 
 optional<WrappingInt32> TCPReceiver::ackno() const {

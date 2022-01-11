@@ -30,21 +30,18 @@ size_t TCPConnection::time_since_last_segment_received() const { return _time_si
 void TCPConnection::send()  //it will be called almost whatever happens.
 {   
     _sender.fill_window();
-    TCPSegment tcpseg;
     while(!_sender.segments_out().empty())
     {
-       tcpseg.header()=_sender.segments_out().front().header();
-       tcpseg.payload()=_sender.segments_out().front().payload();
+       _segments_out.push(_sender.segments_out().front());
        _sender.segments_out().pop();
        if(_receiver.ackno().has_value())
        {
-           tcpseg.header().ack=true;
-           tcpseg.header().ackno=_receiver.ackno().value();
-           tcpseg.header().win=_receiver.window_size()>MAXU16_t?MAXU16_t:_receiver.window_size();
+           _segments_out.back().header().ack=true;
+           _segments_out.back().header().ackno=_receiver.ackno().value();
+           _segments_out.back().header().win=_receiver.window_size()>MAXU16_t?MAXU16_t:_receiver.window_size();
        }
-       _segments_out.push(tcpseg);
     }
-    if(_receiver.unassembled_bytes()==0&&_receiver.stream_out().eof()//preq #1
+    if(_receiver.unassembled_bytes()==0&&_receiver.stream_out().input_ended()//preq #1
     &&_sender.stream_in().eof()   //preq #2
     &&_sender.bytes_in_flight()==0)  //preq #3  
     {  
@@ -81,7 +78,7 @@ void TCPConnection::segment_received(const TCPSegment &seg) {
         //2.responding to a “keep-alive” segment.
             _sender.send_empty_segment();
          
-        if(seg.header().fin&&!_sender.stream_in().eof())
+        if(_receiver.stream_out().input_ended()&&!_sender.stream_in().eof())
            _linger_after_streams_finish=false;
         send();
     }
@@ -120,7 +117,6 @@ void TCPConnection::end_input_stream() {
 }
 
 void TCPConnection::connect() {
-    _sender.fill_window();
     send();
 }
 
