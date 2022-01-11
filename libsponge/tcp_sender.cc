@@ -42,14 +42,14 @@ void TCPSender::fill_window() {
             tcpseg.payload()=Buffer(_stream.read(payload_size));
 
             if(!fin_sent&&_stream.eof()&&payload_size<=min(TCPConfig::MAX_PAYLOAD_SIZE,_winright-_next_seqno))
-            {
+            {  //piggyback a fin if necessary.
                tcpseg.header().fin=true; 
                fin_sent=true;
             }                             
         }
-            tcpseg.header().seqno=wrap(_next_seqno,_isn);
-            _next_seqno+=tcpseg.length_in_sequence_space();
-            _bytes_in_flight+=tcpseg.length_in_sequence_space();
+        tcpseg.header().seqno=wrap(_next_seqno,_isn);
+        _next_seqno+=tcpseg.length_in_sequence_space();
+        _bytes_in_flight+=tcpseg.length_in_sequence_space();
         if(tcpseg.length_in_sequence_space()>0)
         {
             clock_running=true;
@@ -106,8 +106,8 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
         _next_seqno++;
         if(_stream.buffer_size()>0)
             tcpseg.payload()=Buffer(_stream.read(1));    //provoke the receiver into sending a new acknowledgment segment
-        else if(_stream.eof())   
-        {                                    //where it reveals that more space has opened up in its window.
+        else if(_stream.eof())                         //where it reveals that more space has opened up in its window.
+        {                                    
             tcpseg.header().fin=true;   
             fin_sent=true;
         }                                               
@@ -139,11 +139,11 @@ void TCPSender::tick(const size_t ms_since_last_tick) {
             clock_running=true;
         }
      }
-     }
+}
 
 unsigned int TCPSender::consecutive_retransmissions() const {
      return _consecutive_retransmissions; 
-     }
+}
 
 void TCPSender::send_empty_segment() {
     TCPSegment empty_segment;
