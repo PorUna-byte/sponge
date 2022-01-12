@@ -25,7 +25,6 @@ int main() {
         TCPConfig cfg{};
         cfg.recv_capacity = 65000;
         auto rd = get_random_generator();
-
         // loop segments back into the same FSM
         for (unsigned rep_no = 0; rep_no < NREPS; ++rep_no) {
             const WrappingInt32 rx_offset(rd());

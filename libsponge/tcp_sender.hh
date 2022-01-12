@@ -48,8 +48,8 @@ class TCPSender {
     uint64_t _bytes_in_flight{0};
 
     std::list<TCPSegment> outstanding_segments{};
-
-    bool first_ack_rcv{false}; 
+    
+    bool syn_sent{false}; 
     bool fin_sent{false};
     bool no_backoff{false};
     friend class myTimer;//Authorize myTimer
@@ -76,6 +76,8 @@ class TCPSender {
     void send_empty_segment();
 
     //! \brief create and send segments to fill as much of the window as possible
+    void fill_window(bool positive);
+
     void fill_window();
 
     //! \brief Notifies the TCPSender of the passage of time

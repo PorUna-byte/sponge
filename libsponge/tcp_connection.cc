@@ -27,9 +27,9 @@ size_t TCPConnection::unassembled_bytes() const {
 
 size_t TCPConnection::time_since_last_segment_received() const { return _time_since_last_segment_received; }
 
-void TCPConnection::send()  //it will be called almost whatever happens.
+void TCPConnection::send(bool positive)  //it will be called almost whatever happens.
 {   
-    _sender.fill_window();
+    _sender.fill_window(positive);
     while(!_sender.segments_out().empty())
     {
        _segments_out.push(_sender.segments_out().front());
@@ -41,7 +41,7 @@ void TCPConnection::send()  //it will be called almost whatever happens.
            _segments_out.back().header().win=_receiver.window_size()>MAXU16_t?MAXU16_t:_receiver.window_size();
        }
     }
-    if(_receiver.unassembled_bytes()==0&&_receiver.stream_out().input_ended()//preq #1
+    if(_receiver.stream_out().input_ended()//preq #1
     &&_sender.stream_in().eof()   //preq #2
     &&_sender.bytes_in_flight()==0)  //preq #3  
     {  
@@ -67,10 +67,17 @@ void TCPConnection::segment_received(const TCPSegment &seg) {
     if(seg.header().rst)
        abort();
     else
-    {
+    {   
+        bool positive=false;
         _receiver.segment_received(seg);
         if(seg.header().ack)
             _sender.ack_received(seg.header().ackno,seg.header().win);
+        if(seg.header().syn&&!_syn_rcvd)
+        {
+            positive=true;
+            _syn_rcvd=true;
+        }
+        _sender.fill_window(positive);
         if((seg.length_in_sequence_space()>0&&_sender.segments_out().empty())
         ||(_receiver.ackno().has_value() && (seg.length_in_sequence_space() == 0)
                 && (seg.header().seqno == _receiver.ackno().value() - 1)))
@@ -80,7 +87,7 @@ void TCPConnection::segment_received(const TCPSegment &seg) {
          
         if(_receiver.stream_out().input_ended()&&!_sender.stream_in().eof())
            _linger_after_streams_finish=false;
-        send();
+        send(false);
     }
     //receive segment-----
 }
@@ -91,8 +98,8 @@ size_t TCPConnection::write(const string &data) {
     if(!_active)
        return 0;
     size_t bytes_written=_sender.stream_in().write(data);
-    _sender.fill_window();
-    send();
+    _sender.fill_window(false);
+    send(false);
     return bytes_written;
 }
 
@@ -104,20 +111,22 @@ void TCPConnection::tick(const size_t ms_since_last_tick) {
     _sender.tick(ms_since_last_tick);
     if(_sender.consecutive_retransmissions()>TCPConfig::MAX_RETX_ATTEMPTS)
     {
-       _sender.send_empty_segment();
+       if(_sender.segments_out().empty()) 
+          _sender.send_empty_segment();
+
        _sender.segments_out().back().header().rst=true;
        abort();
     }
-    send();
+    send(false);
 }
 
 void TCPConnection::end_input_stream() {
     _sender.stream_in().end_input();
-    send();
+    send(false);
 }
 
 void TCPConnection::connect() {
-    send();
+    send(true);
 }
 
 TCPConnection::~TCPConnection() {

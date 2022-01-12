@@ -26,15 +26,16 @@ uint64_t TCPSender::bytes_in_flight() const {
     return _bytes_in_flight;
      }
 
-void TCPSender::fill_window() {
+void TCPSender::fill_window(bool positive) {
     size_t payload_size=1;
     while(_next_seqno<=_winright&&payload_size>0) //Keep sending
     {
         TCPSegment tcpseg;
-        if(!first_ack_rcv) //we need to send SYN to build the connection between receiver,That is the begin of _stream
+        if(!syn_sent&&positive) //we need to send SYN to build the connection between receiver,That is the begin of _stream
         {
             tcpseg.header().syn=true;
             payload_size=0; 
+            syn_sent=true;
         }
         else
         {   
@@ -59,7 +60,10 @@ void TCPSender::fill_window() {
         }
     }
 }
-
+void TCPSender::fill_window()
+{
+    fill_window(true);
+} 
 //! \param ackno The remote receiver's ackno (acknowledgment number)
 //! \param window_size The remote receiver's advertised window size
 void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_size) { 
@@ -69,7 +73,6 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
      bool ACKed=false;
      _winleft=absolute_ackno;   //only by acknowledging at least one segment,can we update the window.
      _winright=_winleft+window_size-1;
-     first_ack_rcv=true; //Note that an ACK has been received, so stop sending SYN.
      uint64_t absolute_oldseqno;
      while(!outstanding_segments.empty())
      {
@@ -99,23 +102,26 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
      }  
      if(_winright>=_next_seqno)
         fill_window();
-     else if(window_size==0)//Keep sending a single byte until more window space are opened
-     {
+     else if(outstanding_segments.empty())//Keep sending a single byte until more window space are opened
+     {  
         TCPSegment tcpseg;
-        tcpseg.header().seqno=wrap(_next_seqno,_isn);//This seqno,we assume, will not be received or acknowledged.
-        _next_seqno++;
+        tcpseg.header().seqno=wrap(_next_seqno,_isn);
         if(_stream.buffer_size()>0)
             tcpseg.payload()=Buffer(_stream.read(1));    //provoke the receiver into sending a new acknowledgment segment
         else if(_stream.eof())                         //where it reveals that more space has opened up in its window.
         {                                    
             tcpseg.header().fin=true;   
             fin_sent=true;
-        }                                               
-        _bytes_in_flight++;
-        no_backoff=true;
-        outstanding_segments.push_front(tcpseg);   //push front, so it can be retransmitted again and again. 
-        clock_running=true;  //Don't forget to run this clock.                                          
-        _segments_out.push(tcpseg);                                
+        }
+        _next_seqno+=tcpseg.length_in_sequence_space();
+        if(tcpseg.length_in_sequence_space()>0)          
+        {                                     
+            _bytes_in_flight+=tcpseg.length_in_sequence_space();
+            no_backoff=true;
+            outstanding_segments.push_front(tcpseg);   //push front, so it can be retransmitted again and again. 
+            clock_running=true;  //Don't forget to run this clock.                                          
+            _segments_out.push(tcpseg);
+        }                                
      }
 }
 
