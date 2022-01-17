@@ -22,7 +22,7 @@ class TCPConnection {
     bool _linger_after_streams_finish{true};
     bool _active{true};
     bool _syn_rcvd{false};
-
+    bool rst_sent{false};
     void send(bool positive);
     void abort();
   public:

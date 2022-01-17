@@ -108,7 +108,7 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
         tcpseg.header().seqno=wrap(_next_seqno,_isn);
         if(_stream.buffer_size()>0)
             tcpseg.payload()=Buffer(_stream.read(1));    //provoke the receiver into sending a new acknowledgment segment
-        else if(_stream.eof())                         //where it reveals that more space has opened up in its window.
+        else if(_stream.eof()&&!fin_sent)                         //where it reveals that more space has opened up in its window.
         {                                    
             tcpseg.header().fin=true;   
             fin_sent=true;

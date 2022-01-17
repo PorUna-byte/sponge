@@ -11,6 +11,7 @@
 //! immediately (from the `recv_frame` method), it stores them for
 //! later retrieval. Otherwise, behaves identically to the underlying
 //! implementation of NetworkInterface.
+class Entry;
 class AsyncNetworkInterface : public NetworkInterface {
     std::queue<InternetDatagram> _datagrams_out{};
 
@@ -48,7 +49,8 @@ class Router {
     //! as specified by the route with the longest prefix_length that matches the
     //! datagram's destination address.
     void route_one_datagram(InternetDatagram &dgram);
-
+    
+    std::vector<Entry> routing_table{};
   public:
     //! Add an interface to the router
     //! \param[in] interface an already-constructed network interface
@@ -70,5 +72,16 @@ class Router {
     //! Route packets between the interfaces
     void route();
 };
+class Entry{
+    private:
+        uint32_t _route_prefix;
+        uint8_t _prefix_length;
+        uint32_t _next_hop;
+        size_t _interface_num;
+        friend class Router;
+    public:
+        Entry(uint32_t route_prefix,uint8_t prefix_length,uint32_t next_hop,size_t interface_num);  
+        bool match(uint32_t route_prefix);
 
+};
 #endif  // SPONGE_LIBSPONGE_ROUTER_HH

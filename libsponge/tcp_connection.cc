@@ -29,6 +29,8 @@ size_t TCPConnection::time_since_last_segment_received() const { return _time_si
 
 void TCPConnection::send(bool positive)  //it will be called almost whatever happens.
 {   
+    if(!_active)
+       return;
     _sender.fill_window(positive);
     while(!_sender.segments_out().empty())
     {
@@ -107,32 +109,40 @@ void TCPConnection::tick(const size_t ms_since_last_tick) {
        return ; 
     _time_since_last_segment_received+=ms_since_last_tick;
     _sender.tick(ms_since_last_tick);
-    if(_sender.consecutive_retransmissions()>TCPConfig::MAX_RETX_ATTEMPTS)
-    {
+    if(_sender.consecutive_retransmissions()>TCPConfig::MAX_RETX_ATTEMPTS&&!rst_sent)
+    {  
+        rst_sent=true;
        if(_sender.segments_out().empty()) 
           _sender.send_empty_segment();
 
        _sender.segments_out().back().header().rst=true;
+       send(false);
        abort();
     }
     send(false);
 }
 
 void TCPConnection::end_input_stream() {
+    if(!_active)
+      return;
     _sender.stream_in().end_input();
     send(false);
 }
 
 void TCPConnection::connect() {
-    send(true);
+    if(_active)
+       send(true);
 }
 
 TCPConnection::~TCPConnection() {
     try {
-        if (active()) {
+        if (active()&&!rst_sent) {
             cerr << "Warning: Unclean shutdown of TCPConnection\n";
-            _sender.send_empty_segment();
+            rst_sent=true;
+            if(_sender.segments_out().empty())
+               _sender.send_empty_segment();
             _sender.segments_out().back().header().rst=true;
+            send(false);
             abort();
         }
     } catch (const exception &e) {
