@@ -7,7 +7,9 @@
 
 #include <optional>
 #include <queue>
-
+#include <unordered_map>
+#define IP2ETH std::unordered_map<uint32_t,std::pair<EthernetAddress,uint32_t>>
+#define IP2TIME std::unordered_map<uint32_t,uint32_t>
 //! \brief A "network interface" that connects IP (the internet layer, or network layer)
 //! with Ethernet (the network access layer, or link layer).
 
@@ -39,7 +41,13 @@ class NetworkInterface {
 
     //! outbound queue of Ethernet frames that the NetworkInterface wants sent
     std::queue<EthernetFrame> _frames_out{};
+    
+    //!A map from IP Address to Ethernet Address.
+    IP2ETH ip2Eth{};
+    
+    IP2TIME arpsent{};
 
+    std::deque<std::pair<InternetDatagram,uint32_t>> datagram_wait2send{};
   public:
     //! \brief Construct a network interface with given Ethernet (network-access-layer) and IP (internet-layer) addresses
     NetworkInterface(const EthernetAddress &ethernet_address, const Address &ip_address);

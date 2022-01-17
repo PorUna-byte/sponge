@@ -21,21 +21,24 @@ void TCPReceiver::segment_received(const TCPSegment &seg) {
        offset++;
        stream_index=0;  //if a segment with syn,the segment data's stream index should be zero.
     }
-    else if(ISN_rcv)
+    else if(ISN_rcv&&!seg.header().syn)
       stream_index=unwrap(seg.header().seqno,ISN_NO,checkpoint)-1;//absolute seqno-1 is stream index.
     else
       return ;  
-    if(seg.header().fin&&!FIN_rcv)
-    {  
-       _reassembler.push_substring(seg.payload().copy(),
-       stream_index,true);
-       FIN_rcv=true;
-    }
-    else
-    {
-       _reassembler.push_substring(seg.payload().copy(),
-       stream_index,false);
-    }
+   if(!_reassembler.stream_out().input_ended())
+      {  
+         if(seg.header().fin)
+         {
+            _reassembler.push_substring(seg.payload().copy(),
+            stream_index,true);
+            FIN_rcv=true;
+         }
+         else
+         {
+            _reassembler.push_substring(seg.payload().copy(),
+            stream_index,false);
+         }
+      }
     if(ISN_rcv&&FIN_rcv&&unassembled_bytes()==0&&offset<2)
       offset++;
 }

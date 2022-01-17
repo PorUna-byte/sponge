@@ -19,7 +19,7 @@ void get_URL(const string &host, const string &path) {
     // the "eof" (end of file).
 
     Address addr(host,"http");
-    CS144TCPSocket tcp;
+    FullStackSocket tcp;
     tcp.connect(addr);
     tcp.write("GET "+path+" HTTP/1.1\r\n"+"Host: "+host+"\r\n"+"Connection: close\r\n\r\n");
     while(!tcp.eof())

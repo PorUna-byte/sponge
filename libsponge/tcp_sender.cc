@@ -37,7 +37,7 @@ void TCPSender::fill_window(bool positive) {
             payload_size=0; 
             syn_sent=true;
         }
-        else
+        else 
         {   
             payload_size=min(TCPConfig::MAX_PAYLOAD_SIZE,min(_winright-_next_seqno+1,_stream.buffer_size()));         
             tcpseg.payload()=Buffer(_stream.read(payload_size));

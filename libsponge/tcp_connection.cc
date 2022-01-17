@@ -84,7 +84,6 @@ void TCPConnection::segment_received(const TCPSegment &seg) {
         //1.at least one segment is sent in reply, to reflect an update in the ackno and window size.
         //2.responding to a “keep-alive” segment.
             _sender.send_empty_segment();
-         
         if(_receiver.stream_out().input_ended()&&!_sender.stream_in().eof())
            _linger_after_streams_finish=false;
         send(false);
@@ -98,7 +97,6 @@ size_t TCPConnection::write(const string &data) {
     if(!_active)
        return 0;
     size_t bytes_written=_sender.stream_in().write(data);
-    _sender.fill_window(false);
     send(false);
     return bytes_written;
 }
